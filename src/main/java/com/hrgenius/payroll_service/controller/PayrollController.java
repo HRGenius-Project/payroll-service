@@ -5,9 +5,13 @@ import com.hrgenius.payroll_service.dto.PayrollResponse;
 import com.hrgenius.payroll_service.dto.SalaryStructure;
 import com.hrgenius.payroll_service.service.PayrollService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 @RestController
@@ -35,5 +39,19 @@ public class PayrollController {
     @GetMapping("/history/{employeeCode}")
     public ResponseEntity<List<PayrollResponse>> getPayrollHistory(@PathVariable String employeeCode) {
         return ResponseEntity.ok(payrollService.getPayrollHistory(employeeCode));
+    }
+
+    @GetMapping(value = "/download/{payrollId}", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<InputStreamResource> downloadPayslip(@PathVariable Long payrollId) {
+        ByteArrayInputStream bis = payrollService.downloadPayslipPdf(payrollId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "inline; filename=payslip_" + payrollId + ".pdf");
+
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(bis));
     }
 }

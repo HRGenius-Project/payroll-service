@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +26,7 @@ public class PayrollService {
     private final SalaryStructureRepository salaryStructureRepository;
     private final PayrollRecordRepository payrollRecordRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final PdfGeneratorService pdfGeneratorService;
 
     @Value("${app.rabbitmq.exchange:hrgenius.exchange}")
     private String exchange;
@@ -114,6 +116,17 @@ public class PayrollService {
                 .stream()
                 .map(this::mapToPayrollResponse)
                 .toList();
+    }
+
+    public ByteArrayInputStream downloadPayslipPdf(Long payrollId) {
+        PayrollRecord record = payrollRecordRepository.findById(payrollId)
+                .orElseThrow(() -> new RuntimeException("Payroll record not found for ID: " + payrollId));
+
+        com.hrgenius.payroll_service.entity.SalaryStructure structure = salaryStructureRepository
+                .findByEmployeeCode(record.getEmployeeCode())
+                .orElseThrow(() -> new RuntimeException("Salary structure not found for: " + record.getEmployeeCode()));
+
+        return pdfGeneratorService.generatePayslipPdf(record, structure);
     }
 
     private SalaryStructure mapToSalaryStructure(com.hrgenius.payroll_service.entity.SalaryStructure entity) {
